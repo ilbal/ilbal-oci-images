@@ -38,7 +38,18 @@
                   # Flatten PG + extensions + utilities into a single $out directory.
                   # This avoids each Nix store path becoming a separate Docker layer,
                   # reducing the final image's layer count and size.
-                  for pkg in ${pg} ${pkgs.bash} ${pkgs.coreutils} ${pkgs.su-exec} ${pkgs.findutils} ${pkgs.gzip} ${pkgs.xz.bin} ${pkgs.zstd.bin}; do
+                  for pkg in \
+                    ${pg} \
+                    ${pkgs.bash} \
+                    ${pkgs.coreutils} \
+                    ${pkgs.su-exec} \
+                    ${pkgs.findutils} \
+                    ${pkgs.gzip} \
+                    ${pkgs.xz.bin} \
+                    ${pkgs.zstd.bin} \
+                    ${pkgs.ncurses} \
+                    ${pkgs.less} \
+                    ${pkgs.pspg}; do
                     cp -rL --no-preserve=mode,ownership,timestamps "$pkg"/* "$out/"
                   done
 
@@ -192,10 +203,9 @@
 
           in
           pkgs.dockerTools.streamLayeredImage {
-            name = "ilbal-pg${pg.version}";
+            name = "ilbal-pg-${pg.version}";
             tag = "latest";
             created = "now";
-            compress = "zstd";
 
             # Contents is empty — we copy real files via extraCommands below.
             # If we put store paths in `contents`, symlinkJoin creates symlinks
@@ -227,7 +237,10 @@
             config = {
               Cmd = [ "postgres" ];
               Entrypoint = [ "/entrypoint.sh" ];
-              Env = [ "PGDATA=/var/lib/postgresql/data" ];
+              Env = [
+                "PGDATA=/var/lib/postgresql/data"
+                "TERMINFO=/share/terminfo"
+              ];
               User = "0";
               WorkingDir = "/var/lib/postgresql";
             };
@@ -243,6 +256,19 @@
                 extensions: with extensions; [
                   postgis
                   pgrouting
+                  pg_cron
+                  pg_csv
+                  pg_duckdb
+                  pg_tle
+                  pgjwt
+                  pgsodium
+                  pgsql-http
+                  pg_net
+                  pgtap
+                  plpython3
+                  pointcloud
+                  pg_safeupdate # requires where clause in deletes
+                  tds_fdw # for ms sql server reads
                 ]
               )
             );
@@ -251,6 +277,19 @@
                 extensions: with extensions; [
                   postgis
                   pgrouting
+                  pg_cron
+                  pg_csv
+                  pg_duckdb
+                  pg_tle
+                  pgjwt
+                  pgsodium
+                  pgsql-http
+                  pg_net
+                  pgtap
+                  plpython3
+                  pointcloud
+                  pg_safeupdate # requires where clause in deletes
+                  tds_fdw # for ms sql server reads
                 ]
               )
             );
@@ -259,6 +298,19 @@
                 extensions: with extensions; [
                   postgis
                   pgrouting
+                  pg_cron
+                  pg_csv
+                  pg_duckdb
+                  pg_tle
+                  pgjwt
+                  pgsodium
+                  pgsql-http
+                  pg_net
+                  pgtap
+                  plpython3
+                  pointcloud
+                  pg_safeupdate # requires where clause in deletes
+                  tds_fdw # for ms sql server reads
                 ]
               )
             );
