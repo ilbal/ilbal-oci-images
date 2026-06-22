@@ -25,7 +25,10 @@
             pg-runtime =
               pkgs.runCommand "pg-runtime"
                 {
-                  buildInputs = [ pkgs.patchelf ];
+                  buildInputs = [
+                    pkgs.patchelf
+                    pkgs.binutils
+                  ];
                 }
                 ''
                   set -euo pipefail
@@ -169,6 +172,10 @@
                     [ -f "$dir/$name" ] && cp -f "$wrapped" "$dir/$name"
                   done
 
+                  # Strip debug symbols from all ELF binaries.
+                  # The originals remain untouched in the Nix store for debugging.
+                  find . -type f -exec file {} + | grep ELF | cut -d: -f1 | xargs -r strip --strip-unneeded 2>/dev/null || true
+
                 '';
 
             # Creates the filesystem skeleton for the Docker image:
@@ -188,6 +195,7 @@
             name = "ilbal-pg${pg.version}";
             tag = "latest";
             created = "now";
+            compress = "zstd";
 
             # Contents is empty — we copy real files via extraCommands below.
             # If we put store paths in `contents`, symlinkJoin creates symlinks
