@@ -62,7 +62,7 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
   cat >> "$PGDATA/postgresql.conf" <<-'CONF'
 listen_addresses = '*'
 port = 5432
-shared_preload_libraries = 'pg_cron'
+shared_preload_libraries = 'pg_cron, pg_duckdb, pg_tle, pg_net, safeupdate'
 # To schedule jobs in a specific database, add a line like:
 # Defaults to 'postgres' if not set.
 # cron.database_name = 'your_database_name'

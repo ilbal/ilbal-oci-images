@@ -53,6 +53,14 @@
                     cp -rL --no-preserve=mode,ownership,timestamps "$pkg"/* "$out/"
                   done
 
+                  # Copy the busybox multi-call binary once (not the full package
+                  # with ~400 hard-linked applets) and create a vi symlink.
+                  # cp -rL above would break busybox's hard links into separate
+                  # 1 MB copies, adding ~900 MB of bloat.
+                  mkdir -p "$out/bin"
+                  cp -L "${pkgs.busybox}/bin/busybox" "$out/bin/"
+                  ln -sf busybox "$out/bin/vi"
+
                   # Strip build-time artifacts before library discovery.
                   # These are pulled into the closure via postgresql-*-dev
                   # (propagated by extensions) but are unneeded at runtime.
@@ -256,17 +264,18 @@
                 extensions: with extensions; [
                   postgis
                   pgrouting
-                  pg_cron
-                  pg_csv
+                  pointcloud
+                  sfcgal
                   pg_duckdb
-                  pg_tle
+                  pg_cron
                   pgjwt
                   pgsodium
+                  pg_csv
+                  pg_tle
                   pgsql-http
                   pg_net
                   pgtap
-                  plpython3
-                  pointcloud
+                  # plpython3
                   pg_safeupdate # requires where clause in deletes
                   tds_fdw # for ms sql server reads
                 ]
@@ -277,17 +286,18 @@
                 extensions: with extensions; [
                   postgis
                   pgrouting
-                  pg_cron
-                  pg_csv
+                  pointcloud
+                  sfcgal
                   pg_duckdb
-                  pg_tle
+                  pg_cron
                   pgjwt
                   pgsodium
+                  pg_csv
+                  pg_tle
                   pgsql-http
                   pg_net
                   pgtap
-                  plpython3
-                  pointcloud
+                  # plpython3
                   pg_safeupdate # requires where clause in deletes
                   tds_fdw # for ms sql server reads
                 ]
@@ -298,17 +308,18 @@
                 extensions: with extensions; [
                   postgis
                   pgrouting
-                  pg_cron
-                  pg_csv
+                  pointcloud
+                  sfcgal
                   pg_duckdb
-                  pg_tle
+                  pg_cron
                   pgjwt
                   pgsodium
+                  pg_csv
+                  pg_tle
                   pgsql-http
                   pg_net
                   pgtap
-                  plpython3
-                  pointcloud
+                  # plpython3
                   pg_safeupdate # requires where clause in deletes
                   tds_fdw # for ms sql server reads
                 ]
