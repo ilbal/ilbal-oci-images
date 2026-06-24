@@ -62,6 +62,9 @@ runtime_deps = [ ]
 [tds_fdw]
 runtime_deps = [ ]
 
+[ogr_fdw]
+runtime_deps = [ ]
+
 # --- Runtime base packages ---------------------------------
 # Always present in the image regardless of extension selection.
 

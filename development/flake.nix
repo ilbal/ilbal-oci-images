@@ -36,15 +36,33 @@
 
         # Create a postgresql-with-extensions derivation for a given PG version.
         # Reads the extension list and any overrides from config.toml.
+        # Custom extensions from ./extensions/*.nix are built against this PG version.
         mkPg =
           pg:
+          let
+            # Build each custom extension against this specific PG version.
+            customExtFiles = builtins.readDir ./extensions;
+            customExtNames = map
+              (f: pkgs.lib.removeSuffix ".nix" f)
+              (pkgs.lib.filter
+                (f: customExtFiles.${f} == "regular" && pkgs.lib.hasSuffix ".nix" f)
+                (builtins.attrNames customExtFiles));
+            buildCustomExt = name: pkgs.callPackage (./extensions + "/${name}.nix") {
+              postgresql = pg;
+            };
+            customExtList = map (n: { name = n; value = buildCustomExt n; }) customExtNames;
+            pgCustomExtensions = builtins.listToAttrs customExtList;
+          in
           pg.withPackages (
             extensions:
+            let
+              allExtensions = extensions // pgCustomExtensions;
+            in
             map (
               name:
               let
                 extCfg = cfg.${name};
-                baseExt = extensions.${name};
+                baseExt = allExtensions.${name};
               in
               if extCfg ? override then baseExt.override extCfg.override else baseExt
             ) extNames
@@ -257,7 +275,7 @@
 
           in
           pkgs.dockerTools.streamLayeredImage {
-            name = "ilbal-pg-extensions-${pg.version}";
+            name = "ilbal-pg-ogr_fdw-${pg.version}";
             tag = "latest";
             created = "now";
 
