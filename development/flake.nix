@@ -17,7 +17,66 @@
       let
         pkgs = import nixpkgs { inherit system; };
 
-        # Function: takes a postgresql-with-extensions package and produces a docker image
+        # ---------------------------------------------------------------
+        #  Read extension configuration from config.toml
+        # ---------------------------------------------------------------
+        cfg = builtins.fromTOML (builtins.readFile ./config.toml);
+
+        # Names of all extensions declared in the config
+        extNames = builtins.attrNames (builtins.removeAttrs cfg [ "runtime_base" ]);
+
+        # Resolve a dotted or plain package name to a Nix package.
+        # e.g. "xz.bin" -> pkgs.xz.bin, "bash" -> pkgs.bash
+        getPkg =
+          name:
+          let
+            parts = pkgs.lib.splitString "." name;
+          in
+          builtins.foldl' (acc: part: acc.${part}) pkgs parts;
+
+        # Create a postgresql-with-extensions derivation for a given PG version.
+        # Reads the extension list and any overrides from config.toml.
+        mkPg =
+          pg:
+          pg.withPackages (extensions:
+            map (
+              name:
+              let
+                extCfg = cfg.${name};
+                baseExt = extensions.${name};
+              in
+              if extCfg ? override then baseExt.override extCfg.override
+              else baseExt
+            ) extNames
+          );
+
+        # Collect all runtime dependency package names from every extension.
+        allRuntimeDepNames = pkgs.lib.unique (
+          pkgs.lib.flatten (
+            map (name: cfg.${name}.runtime_deps or [ ]) extNames
+          )
+        );
+
+        # Base packages that are always included in the image.
+        basePkgNames = cfg.runtime_base.packages;
+
+        # Every runtime package needed in the image (excluding busybox,
+        # which is handled separately to avoid hard-link bloat).
+        extraPkgNames = builtins.filter (n: n != "busybox") (allRuntimeDepNames ++ basePkgNames);
+
+        # Build the shell loop string for flattening all package trees.
+        mkFlattenLoop =
+          pg:
+          let
+            extraPkgs = map getPkg extraPkgNames;
+            allPkgs = [ pg ] ++ extraPkgs;
+          in
+          builtins.concatStringsSep " \\\n  " (map (p: "${p}") allPkgs);
+
+        # -----------------------------------------------------------------
+        #  Function: takes a postgresql-with-extensions package and
+        #  produces a flattened, relocatable Docker/OCI image.
+        # -----------------------------------------------------------------
         buildPgImage =
           pg:
 
@@ -35,22 +94,11 @@
 
                   mkdir -p "$out"
 
-                  # Flatten PG + extensions + utilities into a single $out directory.
+                  # Flatten PG + extensions + runtime deps into a single $out directory.
                   # This avoids each Nix store path becoming a separate Docker layer,
                   # reducing the final image's layer count and size.
                   for pkg in \
-                    ${pg} \
-                    ${pkgs.sfcgal} \
-                    ${pkgs.bash} \
-                    ${pkgs.coreutils} \
-                    ${pkgs.su-exec} \
-                    ${pkgs.findutils} \
-                    ${pkgs.gzip} \
-                    ${pkgs.xz.bin} \
-                    ${pkgs.zstd.bin} \
-                    ${pkgs.ncurses} \
-                    ${pkgs.less} \
-                    ${pkgs.pspg}; do
+                    ${mkFlattenLoop pg}; do
                     cp -rL --no-preserve=mode,ownership,timestamps "$pkg"/* "$out/"
                   done
 
@@ -195,7 +243,6 @@
                   # Strip debug symbols from all ELF binaries.
                   # The originals remain untouched in the Nix store for debugging.
                   find . -type f -exec file {} + | grep ELF | cut -d: -f1 | xargs -r strip --strip-unneeded 2>/dev/null || true
-
                 '';
 
             # Creates the filesystem skeleton for the Docker image:
@@ -259,70 +306,9 @@
       {
         packages =
           let
-            # Any postgres extension in nixpkgs can be added inside withPackages
-            pg16 = buildPgImage (
-              pkgs.postgresql_16.withPackages (
-                extensions: with extensions; [
-                  postgis
-                  pgrouting
-                  pointcloud
-                  pg_duckdb
-                  pg_cron
-                  pgjwt
-                  pgsodium
-                  pg_csv
-                  pg_tle
-                  pgsql-http
-                  pg_net
-                  pgtap
-                  # plpython3
-                  pg_safeupdate # requires where clause in deletes
-                  tds_fdw # for ms sql server reads
-                ]
-              )
-            );
-            pg17 = buildPgImage (
-              pkgs.postgresql_17.withPackages (
-                extensions: with extensions; [
-                  postgis
-                  pgrouting
-                  pointcloud
-                  pg_duckdb
-                  pg_cron
-                  pgjwt
-                  pgsodium
-                  pg_csv
-                  pg_tle
-                  pgsql-http
-                  pg_net
-                  pgtap
-                  # plpython3
-                  pg_safeupdate # requires where clause in deletes
-                  tds_fdw # for ms sql server reads
-                ]
-              )
-            );
-            pg18 = buildPgImage (
-              pkgs.postgresql_18.withPackages (
-                extensions: with extensions; [
-                  postgis
-                  pgrouting
-                  pointcloud
-                  pg_duckdb
-                  pg_cron
-                  pgjwt
-                  pgsodium
-                  pg_csv
-                  pg_tle
-                  pgsql-http
-                  pg_net
-                  pgtap
-                  # plpython3
-                  pg_safeupdate # requires where clause in deletes
-                  tds_fdw # for ms sql server reads
-                ]
-              )
-            );
+            pg16 = buildPgImage (mkPg pkgs.postgresql_16);
+            pg17 = buildPgImage (mkPg pkgs.postgresql_17);
+            pg18 = buildPgImage (mkPg pkgs.postgresql_18);
           in
           {
             inherit pg16 pg17 pg18;

@@ -1,0 +1,81 @@
+# Extension catalog for ilbal-oci-images
+#
+# The development image includes ALL extensions listed here.
+# This file lets you record which extensions your project needs
+# for a custom production image build.
+#
+# To use an extension, uncomment its section.
+# Extensions left commented out are still available in the dev
+# image but are omitted from the production build.
+#
+# runtime_deps: Extra Nix packages that must be present in the
+#               image at runtime (e.g., shared libraries).
+#               Build-time dependencies are handled by nixpkgs.
+
+# --- Extensions -------------------------------------------------
+# Uncomment the sections for extensions your project requires.
+#
+# Format:
+#   [<extension_name>]
+#   runtime_deps = [ "nixpkgs_attr_1", "nixpkgs_attr_2" ]
+
+[postgis]
+runtime_deps = [ "sfcgal" ]
+override.withSfcgal = true
+
+[pgrouting]
+runtime_deps = [ ]
+
+[pointcloud]
+runtime_deps = [ ]
+
+[pg_duckdb]
+runtime_deps = [ ]
+
+[pg_cron]
+runtime_deps = [ ]
+
+[pgjwt]
+runtime_deps = [ ]
+
+[pgsodium]
+runtime_deps = [ ]
+
+[pg_csv]
+runtime_deps = [ ]
+
+[pg_tle]
+runtime_deps = [ ]
+
+[pgsql-http]
+runtime_deps = [ ]
+
+[pg_net]
+runtime_deps = [ ]
+
+[pgtap]
+runtime_deps = [ ]
+
+[pg_safeupdate]
+runtime_deps = [ ]
+
+[tds_fdw]
+runtime_deps = [ ]
+
+# --- Runtime base packages ---------------------------------
+# Always present in the image regardless of extension selection.
+
+[runtime_base]
+packages = [
+  "bash",
+  "busybox",
+  "coreutils",
+  "findutils",
+  "gzip",
+  "less",
+  "ncurses",
+  "pspg",
+  "su-exec",
+  "xz.bin",
+  "zstd.bin",
+]
