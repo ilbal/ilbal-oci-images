@@ -40,6 +40,7 @@
                   # reducing the final image's layer count and size.
                   for pkg in \
                     ${pg} \
+                    ${pkgs.sfcgal} \
                     ${pkgs.bash} \
                     ${pkgs.coreutils} \
                     ${pkgs.su-exec} \
@@ -265,7 +266,6 @@
                   postgis
                   pgrouting
                   pointcloud
-                  sfcgal
                   pg_duckdb
                   pg_cron
                   pgjwt
@@ -287,7 +287,6 @@
                   postgis
                   pgrouting
                   pointcloud
-                  sfcgal
                   pg_duckdb
                   pg_cron
                   pgjwt
@@ -309,7 +308,6 @@
                   postgis
                   pgrouting
                   pointcloud
-                  sfcgal
                   pg_duckdb
                   pg_cron
                   pgjwt
