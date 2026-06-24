@@ -38,23 +38,21 @@
         # Reads the extension list and any overrides from config.toml.
         mkPg =
           pg:
-          pg.withPackages (extensions:
+          pg.withPackages (
+            extensions:
             map (
               name:
               let
                 extCfg = cfg.${name};
                 baseExt = extensions.${name};
               in
-              if extCfg ? override then baseExt.override extCfg.override
-              else baseExt
+              if extCfg ? override then baseExt.override extCfg.override else baseExt
             ) extNames
           );
 
         # Collect all runtime dependency package names from every extension.
         allRuntimeDepNames = pkgs.lib.unique (
-          pkgs.lib.flatten (
-            map (name: cfg.${name}.runtime_deps or [ ]) extNames
-          )
+          pkgs.lib.flatten (map (name: cfg.${name}.runtime_deps or [ ]) extNames)
         );
 
         # Base packages that are always included in the image.
@@ -259,7 +257,7 @@
 
           in
           pkgs.dockerTools.streamLayeredImage {
-            name = "ilbal-pg-${pg.version}";
+            name = "ilbal-pg-extensions-${pg.version}";
             tag = "latest";
             created = "now";
 
