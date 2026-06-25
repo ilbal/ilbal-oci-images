@@ -113,12 +113,12 @@
               pkgs.runCommand "${pname}-${version}" {
                 nativeBuildInputs = [ pkgs.gnutar ];
               } ''
-                mkdir -p $out/lib $out/share/extension
+                mkdir -p $out/lib $out/share/postgresql/extension
                 cd $(mktemp -d)
                 tar xzf ${src}
                 mv *.so    $out/lib/ || true
-                mv *.control $out/share/extension/ 2>/dev/null || true
-                mv *.sql    $out/share/extension/ 2>/dev/null || true
+                mv *.control $out/share/postgresql/extension/ 2>/dev/null || true
+                mv *.sql    $out/share/postgresql/extension/ 2>/dev/null || true
               '';
 
             # Build each custom extension against this specific PG version.
