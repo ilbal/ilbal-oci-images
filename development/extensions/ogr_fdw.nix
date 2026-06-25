@@ -1,4 +1,10 @@
-{ pgxsExtension, fetchFromGitHub, lib, gdal, postgresql }:
+{
+  pgxsExtension,
+  fetchFromGitHub,
+  lib,
+  gdal,
+  postgresql,
+}:
 
 pgxsExtension {
   pname = "ogr_fdw";

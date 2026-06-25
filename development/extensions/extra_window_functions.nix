@@ -1,4 +1,8 @@
-{ pgxsExtension, fetchFromGitHub, lib }:
+{
+  pgxsExtension,
+  fetchFromGitHub,
+  lib,
+}:
 
 pgxsExtension {
   pname = "extra_window_functions";

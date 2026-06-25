@@ -415,6 +415,7 @@
               Cmd = [ "postgres" ];
               Entrypoint = [ "/entrypoint.sh" ];
               Env = [
+                "PAGER=pspg"
                 "PGDATA=/var/lib/postgresql/data"
                 "TERMINFO=/share/terminfo"
               ];

@@ -1,4 +1,8 @@
-{ pgxsExtension, fetchFromGitHub, lib }:
+{
+  pgxsExtension,
+  fetchFromGitHub,
+  lib,
+}:
 
 pgxsExtension {
   pname = "first_last_agg";

@@ -46,7 +46,6 @@ runtime_deps = [ "sfcgal" ]
 override.withSfcgal = true
 
 [extensions.ogr_fdw]
-# Map derivation parameter → Nix package name.
 # Switch to { gdal = "gdal" } for the full GDAL (~1.1 GiB closure).
 dependencies = { gdal = "gdalMinimal" }
 
@@ -67,6 +66,7 @@ dependencies = { gdal = "gdalMinimal" }
 
 # --- Runtime base packages ---------------------------------
 # Always present in the image regardless of extension selection.
+# aka, don't mes with this section
 
 [runtime_base]
 packages = [
