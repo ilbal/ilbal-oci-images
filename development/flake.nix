@@ -85,14 +85,18 @@
             buildCustomExt =
               name:
               let
+                extFn = import (./extensions + "/${name}.nix");
+                extFnArgs = builtins.functionArgs extFn;
                 extCfg = cfg.extensions.${name} or { };
                 depAttrs = builtins.mapAttrs (_name: pkg: getPkg pkg) (extCfg.dependencies or { });
               in
-              pkgs.callPackage (./extensions + "/${name}.nix") (
+              pkgs.callPackage extFn (
                 {
-                  postgresql = pg;
                   inherit pgxsExtension;
                 }
+                # Only pass postgresql when the extension function actually
+                # declares it (e.g. ogr_fdw uses it in a custom postInstall).
+                // pkgs.lib.optionalAttrs (extFnArgs ? postgresql) { postgresql = pg; }
                 // depAttrs
               );
             customExtList = map (n: {
