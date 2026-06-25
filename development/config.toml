@@ -33,6 +33,7 @@ nixpkgs = [
   "pgtap",
   "pg_safeupdate",
   "tds_fdw",
+  "h3-pg",  # Provides both h3 and h3_postgis extensions
   # To exclude a simple extension, comment out its line:
   # "pg_anonymizer",
 ]
@@ -52,6 +53,10 @@ dependencies = { gdal = "gdalMinimal" }
 [extensions.pg_accumulator]
 
 [extensions.pg_currency]
+
+[extensions.extra_window_functions]
+
+[extensions.first_last_agg]
 
 # To exclude an extension with extra config, comment out the entire
 # sub-table block (the header and all its keys):
