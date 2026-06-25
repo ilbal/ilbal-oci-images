@@ -58,6 +58,8 @@ dependencies = { gdal = "gdalMinimal" }
 
 [extensions.first_last_agg]
 
+[extensions.tzf]
+
 # To exclude an extension with extra config, comment out the entire
 # sub-table block (the header and all its keys):
 # [extensions.pg_partman]

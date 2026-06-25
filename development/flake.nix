@@ -95,6 +95,32 @@
                 };
               };
 
+            # Pre-built pgrx (Rust) extension builder — for extensions compiled
+            # externally via `cargo pgrx package` and distributed as tarballs.
+            # Expects a tarball containing .so, .control, and .sql files.
+            prebuiltPgrxExtension =
+              {
+                pname,
+                version,
+                url,
+                hash,
+                meta ? { },
+                ...
+              }:
+              let
+                src = pkgs.fetchurl { inherit url hash; };
+              in
+              pkgs.runCommand "${pname}-${version}" {
+                nativeBuildInputs = [ pkgs.gnutar ];
+              } ''
+                mkdir -p $out/lib $out/share/extension
+                cd $(mktemp -d)
+                tar xzf ${src}
+                mv *.so    $out/lib/ || true
+                mv *.control $out/share/extension/ 2>/dev/null || true
+                mv *.sql    $out/share/extension/ 2>/dev/null || true
+              '';
+
             # Build each custom extension against this specific PG version.
             customExtFiles = builtins.readDir ./extensions;
             customExtNames = map (f: pkgs.lib.removeSuffix ".nix" f) (
@@ -119,6 +145,8 @@
                 builtins.intersectAttrs extFnArgs (
                   {
                     inherit pgxsExtension;
+                    inherit prebuiltPgrxExtension;
+                    pgVersion = builtins.substring 0 2 pg.version;
                     postgresql = pg; # only kept if the extension declares it
                   }
                   // depAttrs
