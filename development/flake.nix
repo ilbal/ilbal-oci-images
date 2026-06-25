@@ -46,6 +46,35 @@
         mkPg =
           pg:
           let
+            # PGXS extension builder — handles boilerplate for all custom
+            # extensions that use PostgreSQL's PGXS build system.
+            pgxsExtension = { pname, version, src, nativeBuildInputs ? [ ], buildInputs ? [ ], postInstall ? null, meta ? { }, ... }:
+            pkgs.stdenv.mkDerivation {
+              inherit pname version src;
+
+              nativeBuildInputs = [ pkgs.clang pg.pg_config ] ++ nativeBuildInputs;
+              buildInputs = [ pg ] ++ buildInputs;
+
+              installFlags = [ "DESTDIR=${placeholder "out"}" ];
+
+              postInstall = if postInstall != null then postInstall else ''
+                if [[ -d "$out${pg}" ]]; then
+                  for entry in "$out${pg}"/*; do
+                    base=$(basename "$entry")
+                    if [[ -d "$entry" ]]; then
+                      mv "$entry" "$out/"
+                    elif [[ -f "$entry" ]]; then
+                      mkdir -p "$out/$base"
+                      mv "$entry" "$out/$base/"
+                    fi
+                  done
+                  rm -r "$out${pg}"
+                fi
+              '';
+
+              meta = meta // { platforms = pg.meta.platforms; };
+            };
+
             # Build each custom extension against this specific PG version.
             customExtFiles = builtins.readDir ./extensions;
             customExtNames = map (f: pkgs.lib.removeSuffix ".nix" f) (
@@ -62,6 +91,7 @@
               pkgs.callPackage (./extensions + "/${name}.nix") (
                 {
                   postgresql = pg;
+                  inherit pgxsExtension;
                 }
                 // depAttrs
               );

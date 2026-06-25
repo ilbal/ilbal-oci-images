@@ -51,6 +51,8 @@ dependencies = { gdal = "gdalMinimal" }
 
 [extensions.pg_accumulator]
 
+[extensions.pg_currency]
+
 # To exclude an extension with extra config, comment out the entire
 # sub-table block (the header and all its keys):
 # [extensions.pg_partman]
