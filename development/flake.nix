@@ -149,7 +149,7 @@
                   # (propagated by extensions) but are unneeded at runtime.
                   # Removing them significantly reduces the final Docker image size.
                   rm -rf "$out/include"
-                  rm -rf "$out/nix-support"
+                  rm -rf "$out/nix"
                   rm -rf "$out/share/doc"
                   rm -rf "$out/share/man"
                   rm -rf "$out/share/info"

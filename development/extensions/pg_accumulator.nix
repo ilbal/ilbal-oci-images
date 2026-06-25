@@ -39,12 +39,6 @@ stdenv.mkDerivation (finalAttrs: {
       done
       rm -r "$out${postgresql}"
     fi
-    if [[ -d "$out/nix/store" ]]; then
-      if ! rmdir "$out/nix/store" "$out/nix" 2>/dev/null; then
-        echo "Left-overs in \$out/nix/store" >&2
-        exit 1
-      fi
-    fi
   '';
 
   meta = {
