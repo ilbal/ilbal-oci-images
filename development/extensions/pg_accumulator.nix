@@ -12,7 +12,7 @@ stdenv.mkDerivation (finalAttrs: {
     owner = "Treedo";
     repo = "pg_accumulator";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-02301ayspbgg8y50s8rclyrnl7vwnlw2aaxpjsannjddbsxhs5zl";
+    hash = "sha256-9BcNu16tSWuVlrcrJTi1fB9qs6csIw2KR++tq70KYAg=";
   };
 
   nativeBuildInputs = [ postgresql.pg_config ];
