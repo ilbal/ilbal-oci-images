@@ -45,9 +45,9 @@ runtime_deps = [ "sfcgal" ]
 override.withSfcgal = true
 
 [extensions.ogr_fdw]
-# Switch to dependencies = [ "gdal" ] for the full GDAL feature set
-# (~1.1 GiB closure).
-dependencies = [ "gdalMinimal" ]
+# Map derivation parameter → Nix package name.
+# Switch to { gdal = "gdal" } for the full GDAL (~1.1 GiB closure).
+dependencies = { gdal = "gdalMinimal" }
 
 [extensions.pg_accumulator]
 

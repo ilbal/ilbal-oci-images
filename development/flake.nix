@@ -57,13 +57,7 @@
               name:
               let
                 extCfg = cfg.extensions.${name} or { };
-                depNames = extCfg.dependencies or [ ];
-                depAttrs = builtins.listToAttrs (
-                  map (d: {
-                    name = d;
-                    value = getPkg d;
-                  }) depNames
-                );
+                depAttrs = builtins.mapAttrs (_name: pkg: getPkg pkg) (extCfg.dependencies or { });
               in
               pkgs.callPackage (./extensions + "/${name}.nix") (
                 {
