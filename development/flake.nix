@@ -48,32 +48,52 @@
           let
             # PGXS extension builder — handles boilerplate for all custom
             # extensions that use PostgreSQL's PGXS build system.
-            pgxsExtension = { pname, version, src, nativeBuildInputs ? [ ], buildInputs ? [ ], postInstall ? null, meta ? { }, ... }:
-            pkgs.stdenv.mkDerivation {
-              inherit pname version src;
+            pgxsExtension =
+              {
+                pname,
+                version,
+                src,
+                nativeBuildInputs ? [ ],
+                buildInputs ? [ ],
+                postInstall ? null,
+                meta ? { },
+                ...
+              }:
+              pkgs.stdenv.mkDerivation {
+                inherit pname version src;
 
-              nativeBuildInputs = [ pkgs.clang pg.pg_config ] ++ nativeBuildInputs;
-              buildInputs = [ pg ] ++ buildInputs;
+                nativeBuildInputs = [
+                  pkgs.clang
+                  pg.pg_config
+                ]
+                ++ nativeBuildInputs;
+                buildInputs = [ pg ] ++ buildInputs;
 
-              installFlags = [ "DESTDIR=${placeholder "out"}" ];
+                installFlags = [ "DESTDIR=${placeholder "out"}" ];
 
-              postInstall = if postInstall != null then postInstall else ''
-                if [[ -d "$out${pg}" ]]; then
-                  for entry in "$out${pg}"/*; do
-                    base=$(basename "$entry")
-                    if [[ -d "$entry" ]]; then
-                      mv "$entry" "$out/"
-                    elif [[ -f "$entry" ]]; then
-                      mkdir -p "$out/$base"
-                      mv "$entry" "$out/$base/"
-                    fi
-                  done
-                  rm -r "$out${pg}"
-                fi
-              '';
+                postInstall =
+                  if postInstall != null then
+                    postInstall
+                  else
+                    ''
+                      if [[ -d "$out${pg}" ]]; then
+                        for entry in "$out${pg}"/*; do
+                          base=$(basename "$entry")
+                          if [[ -d "$entry" ]]; then
+                            mv "$entry" "$out/"
+                          elif [[ -f "$entry" ]]; then
+                            mkdir -p "$out/$base"
+                            mv "$entry" "$out/$base/"
+                          fi
+                        done
+                        rm -r "$out${pg}"
+                      fi
+                    '';
 
-              meta = meta // { platforms = pg.meta.platforms; };
-            };
+                meta = meta // {
+                  platforms = pg.meta.platforms;
+                };
+              };
 
             # Build each custom extension against this specific PG version.
             customExtFiles = builtins.readDir ./extensions;
@@ -90,14 +110,19 @@
                 extCfg = cfg.extensions.${name} or { };
                 depAttrs = builtins.mapAttrs (_name: pkg: getPkg pkg) (extCfg.dependencies or { });
               in
+              # callPackage already filters autoArgs through functionArgs
+              # (intersectAttrs), but it does NOT filter explicit args — those
+              # are passed through '// args' unconditionally.  We apply the
+              # same intersectAttrs treatment to our own explicit args so that
+              # extensions don't have to declare bindings they don't use.
               pkgs.callPackage extFn (
-                {
-                  inherit pgxsExtension;
-                }
-                # Only pass postgresql when the extension function actually
-                # declares it (e.g. ogr_fdw uses it in a custom postInstall).
-                // pkgs.lib.optionalAttrs (extFnArgs ? postgresql) { postgresql = pg; }
-                // depAttrs
+                builtins.intersectAttrs extFnArgs (
+                  {
+                    inherit pgxsExtension;
+                    postgresql = pg; # only kept if the extension declares it
+                  }
+                  // depAttrs
+                )
               );
             customExtList = map (n: {
               name = n;
