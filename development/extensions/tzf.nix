@@ -11,11 +11,11 @@ prebuiltPgrxExtension {
     "https://github.com/ringsaturn/pg-tzf/releases/download/v${version}/pg-tzf-v${version}-pg${pgVersion}-linux-x86_64.tar.gz";
 
   hash = {
-    "14" = "sha256-a620c19abb8ceb4b832b304279a434d3a29fd712d289d492775407fabecce56c";
-    "15" = "sha256-cfc150b5650eac5ed48a01d224a825a125768a28137a3b330a959ac1245e7f13";
-    "16" = "sha256-b2c90404573af7fb5a68c42706edfd606ab86596c7409b266e7adaaf5553cdd5";
-    "17" = "sha256-7d9ec7037a7a197504df776ae129f273706e4df80600c0c8027697fba9deb67e";
-    "18" = "sha256-51b5bca61cf68cf94dfff7b0dc900690533fc1f1e19f614ce67e3afd258db606";
+    "14" = "sha256-piDBmruM60uDKzBCeaQ006Kf1xLSidSSd1QH+r7M5Ww=";
+    "15" = "sha256-z8FQtWUOrF7UigHSJKgloSV2iigTejszCpWawSRefxM=";
+    "16" = "sha256-sskEBFc69/taaMQnBu39YGq4ZZbHQJsmbnrar1VTzdU=";
+    "17" = "sha256-fZ7HA3p6GXUE33dq4Snyc3BuTfgGAMDIAnaX+6netn4=";
+    "18" = "sha256-UbW8phz2jPlN//ew3JAGkFM/wfHhn2FM5n46/SWNtgY=";
   }.${pgVersion};
 
   meta = {
