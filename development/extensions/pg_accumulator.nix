@@ -1,4 +1,4 @@
-{ pgxsExtension, fetchFromGitHub, lib }:
+{ pgxsExtension, fetchFromGitHub, lib, postgresql }:
 
 pgxsExtension {
   pname = "pg_accumulator";
