@@ -4,66 +4,57 @@
 # This file lets you record which extensions your project needs
 # for a custom production image build.
 #
-# To use an extension, uncomment its section.
-# Extensions left commented out are still available in the dev
-# image but are omitted from the production build.
+# To exclude an extension from a production build, comment out its
+# line or sub-table.  Commented-out lines remain available in the
+# dev image but are omitted from the production build.
 #
-# runtime_deps: Extra Nix packages that must be present in the
-#               image at runtime (e.g., shared libraries).
-#               Build-time dependencies are handled by nixpkgs.
+# Optional per-extension keys (sub-tables only):
+#   runtime_deps  — Nix packages needed at runtime (e.g., shared libs).
+#   dependencies  — Extra Nix packages to pass as build inputs to
+#                   custom extension derivations (see ogr_fdw for example).
+#   override      — Attribute overrides for the nixpkgs derivation.
 
 # --- Extensions -------------------------------------------------
-# Uncomment the sections for extensions your project requires.
-#
-# Format:
-#   [<extension_name>]
-#   runtime_deps = [ "nixpkgs_attr_1", "nixpkgs_attr_2" ]
+# Simple nixpkgs extensions — one line each.
+# Uncomment to include, comment out to exclude.
 
-[postgis]
+[extensions]
+nixpkgs = [
+  "pgrouting",
+  "pointcloud",
+  "pg_duckdb",
+  "pg_cron",
+  "pgjwt",
+  "pgsodium",
+  "pg_csv",
+  "pg_tle",
+  "pgsql-http",
+  "pg_net",
+  "pgtap",
+  "pg_safeupdate",
+  "tds_fdw",
+  # To exclude a simple extension, comment out its line:
+  # "pg_anonymizer",
+]
+
+# Extensions with extra configuration — sub-table per extension.
+# Uncomment the entire block to include.
+
+[extensions.postgis]
 runtime_deps = [ "sfcgal" ]
 override.withSfcgal = true
 
-[pgrouting]
-runtime_deps = [ ]
+[extensions.ogr_fdw]
+# Switch to dependencies = [ "gdal" ] for the full GDAL feature set
+# (~1.1 GiB closure).
+dependencies = [ "gdalMinimal" ]
 
-[pointcloud]
-runtime_deps = [ ]
+[extensions.pg_accumulator]
 
-[pg_duckdb]
-runtime_deps = [ ]
-
-[pg_cron]
-runtime_deps = [ ]
-
-[pgjwt]
-runtime_deps = [ ]
-
-[pgsodium]
-runtime_deps = [ ]
-
-[pg_csv]
-runtime_deps = [ ]
-
-[pg_tle]
-runtime_deps = [ ]
-
-[pgsql-http]
-runtime_deps = [ ]
-
-[pg_net]
-runtime_deps = [ ]
-
-[pgtap]
-runtime_deps = [ ]
-
-[pg_safeupdate]
-runtime_deps = [ ]
-
-[tds_fdw]
-runtime_deps = [ ]
-
-[ogr_fdw]
-runtime_deps = [ ]
+# To exclude an extension with extra config, comment out the entire
+# sub-table block (the header and all its keys):
+# [extensions.pg_partman]
+# runtime_deps = [ ]
 
 # --- Runtime base packages ---------------------------------
 # Always present in the image regardless of extension selection.

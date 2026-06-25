@@ -22,8 +22,14 @@
         # ---------------------------------------------------------------
         cfg = builtins.fromTOML (builtins.readFile ./config.toml);
 
-        # Names of all extensions declared in the config
-        extNames = builtins.attrNames (builtins.removeAttrs cfg [ "runtime_base" ]);
+        # Extension configuration is under [extensions]:
+        #   nixpkgs = [ ]  — simple extensions taken straight from nixpkgs
+        #   [extensions.xxx]  — sub-tables for extensions needing extra config
+        #                      (runtime_deps, dependencies, override)
+        extCfg = cfg.extensions;
+        nixpkgsExtNames = extCfg.nixpkgs or [ ];
+        complexExtNames = builtins.attrNames (builtins.removeAttrs extCfg [ "nixpkgs" ]);
+        extNames = pkgs.lib.unique (nixpkgsExtNames ++ complexExtNames);
 
         # Resolve a dotted or plain package name to a Nix package.
         # e.g. "xz.bin" -> pkgs.xz.bin, "bash" -> pkgs.bash
@@ -42,15 +48,33 @@
           let
             # Build each custom extension against this specific PG version.
             customExtFiles = builtins.readDir ./extensions;
-            customExtNames = map
-              (f: pkgs.lib.removeSuffix ".nix" f)
-              (pkgs.lib.filter
-                (f: customExtFiles.${f} == "regular" && pkgs.lib.hasSuffix ".nix" f)
-                (builtins.attrNames customExtFiles));
-            buildCustomExt = name: pkgs.callPackage (./extensions + "/${name}.nix") {
-              postgresql = pg;
-            };
-            customExtList = map (n: { name = n; value = buildCustomExt n; }) customExtNames;
+            customExtNames = map (f: pkgs.lib.removeSuffix ".nix" f) (
+              pkgs.lib.filter (f: customExtFiles.${f} == "regular" && pkgs.lib.hasSuffix ".nix" f) (
+                builtins.attrNames customExtFiles
+              )
+            );
+            buildCustomExt =
+              name:
+              let
+                extCfg = cfg.extensions.${name} or { };
+                depNames = extCfg.dependencies or [ ];
+                depAttrs = builtins.listToAttrs (
+                  map (d: {
+                    name = d;
+                    value = getPkg d;
+                  }) depNames
+                );
+              in
+              pkgs.callPackage (./extensions + "/${name}.nix") (
+                {
+                  postgresql = pg;
+                }
+                // depAttrs
+              );
+            customExtList = map (n: {
+              name = n;
+              value = buildCustomExt n;
+            }) customExtNames;
             pgCustomExtensions = builtins.listToAttrs customExtList;
           in
           pg.withPackages (
@@ -61,7 +85,7 @@
             map (
               name:
               let
-                extCfg = cfg.${name};
+                extCfg = cfg.extensions.${name} or { };
                 baseExt = allExtensions.${name};
               in
               if extCfg ? override then baseExt.override extCfg.override else baseExt
@@ -70,7 +94,7 @@
 
         # Collect all runtime dependency package names from every extension.
         allRuntimeDepNames = pkgs.lib.unique (
-          pkgs.lib.flatten (map (name: cfg.${name}.runtime_deps or [ ]) extNames)
+          pkgs.lib.flatten (map (name: cfg.extensions.${name}.runtime_deps or [ ]) extNames)
         );
 
         # Base packages that are always included in the image.
@@ -275,7 +299,7 @@
 
           in
           pkgs.dockerTools.streamLayeredImage {
-            name = "ilbal-pg-ogr_fdw-${pg.version}";
+            name = "ilbal-postgresql-${pg.version}";
             tag = "latest";
             created = "now";
 

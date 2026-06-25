@@ -1,9 +1,10 @@
-{ stdenv
-, clang
-, fetchFromGitHub
-, lib
-, postgresql
-, gdal
+{
+  stdenv,
+  clang,
+  fetchFromGitHub,
+  lib,
+  postgresql,
+  gdal,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -17,8 +18,15 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-9U7pNOffUQUvPpxG2DsWDXKcq7Y0LRsvnJ0fShF5OrI=";
   };
 
-  nativeBuildInputs = [ clang postgresql.pg_config gdal ];
-  buildInputs = [ postgresql gdal ];
+  nativeBuildInputs = [
+    clang
+    postgresql.pg_config
+    gdal
+  ];
+  buildInputs = [
+    postgresql
+    gdal
+  ];
 
   installFlags = [ "DESTDIR=${placeholder "out"}" ];
 
