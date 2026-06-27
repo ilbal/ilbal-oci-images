@@ -120,6 +120,7 @@
           curl
           gdal
           gnugrep
+          zlib
           gnused
           gzip
           jq
@@ -262,43 +263,40 @@
           install -D -m 0555 ${./entrypoint.sh} $out/entrypoint.sh
         '';
 
-        buildImage =
-          version:
-          pkgs.dockerTools.streamLayeredImage {
-            name = "ilbal-postgresql-loaders";
-            tag = version;
-            created = "now";
+        version = builtins.replaceStrings [ "\n" ] [ "" ] (builtins.readFile ./.version);
 
-            contents = [ ];
-            includeStorePaths = false;
+        image = pkgs.dockerTools.streamLayeredImage {
+          name = "ilbal-postgresql-loaders-${version}";
+          tag = "latest";
+          created = "now";
 
-            extraCommands = ''
-              cp -rL --no-preserve=mode,ownership,timestamps ${runtime}/. ./
-              cp -rL --no-preserve=mode,ownership,timestamps ${image-root}/. ./
-            '';
+          contents = [ ];
+          includeStorePaths = false;
 
-            fakeRootCommands = ''
-              find . -type d -exec chmod 755 {} \;
-              find . -type f -exec chmod 644 {} \;
-              if [ -d bin ]; then find bin -type f -exec chmod 755 {} \; ; fi
-              if [ -d lib ]; then find lib -type f -exec chmod 755 {} \; ; fi
-              if [ -f entrypoint.sh ]; then chmod 555 entrypoint.sh; fi
-            '';
+          extraCommands = ''
+            cp -rL --no-preserve=mode,ownership,timestamps ${runtime}/. ./
+            cp -rL --no-preserve=mode,ownership,timestamps ${image-root}/. ./
+          '';
 
-            config = {
-              Entrypoint = [ "/entrypoint.sh" ];
-              Cmd = [ "--help" ];
-              Env = [ "PAGER=less" ];
-              User = "0";
-            };
+          fakeRootCommands = ''
+            find . -type d -exec chmod 755 {} \;
+            find . -type f -exec chmod 644 {} \;
+            if [ -d bin ]; then find bin -type f -exec chmod 755 {} \; ; fi
+            if [ -d lib ]; then find lib -type f -exec chmod 755 {} \; ; fi
+            if [ -f entrypoint.sh ]; then chmod 555 entrypoint.sh; fi
+          '';
+
+          config = {
+            Entrypoint = [ "/entrypoint.sh" ];
+            Cmd = [ "--help" ];
+            Env = [ "PAGER=less" ];
+            User = "0";
           };
+        };
 
       in
       {
-        packages = {
-          v1 = buildImage "v1";
-          default = buildImage "latest";
-        };
+        packages.default = image;
       }
     );
 }
