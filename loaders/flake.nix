@@ -120,8 +120,8 @@
           curl
           gdal
           gnugrep
-          zlib
           gnused
+          proj
           gzip
           jq
           less
@@ -217,16 +217,15 @@
               find lib -type f -exec chmod 755 {} \;
               find bin -type f -exec chmod 755 {} \;
 
-              find . -type f -exec file {} + | grep ELF | cut -d: -f1 | while read -r f; do
+              find . -type f -exec file {} + | grep ELF | cut -d: -f1 > /tmp/elfs2
+              while read -r f; do
                 case "$(basename "$f")" in *ld-linux*) continue;; esac
-                interp=$(patchelf --print-interpreter "$f" 2>/dev/null) || continue
-                [ -z "$interp" ] && continue
+                file "$f" | grep -q "dynamically linked" || continue
                 patchelf --set-rpath '$ORIGIN/../lib' "$f" 2>/dev/null || true
-              done
+              done < /tmp/elfs2
 
               find . -type f -exec file {} + | grep ELF | cut -d: -f1 | while read -r f; do
-                interp=$(patchelf --print-interpreter "$f" 2>/dev/null) || continue
-                [ -z "$interp" ] && continue
+                file "$f" | grep -q "dynamically linked" || continue
                 patchelf --print-needed "$f" 2>/dev/null | while read -r needed; do
                   case "$needed" in /nix/store/*)
                     soname=$(basename "$needed")
@@ -289,7 +288,11 @@
           config = {
             Entrypoint = [ "/entrypoint.sh" ];
             Cmd = [ "--help" ];
-            Env = [ "PAGER=less" ];
+              Env = [
+                "PAGER=less"
+                "GDAL_DATA=/share/gdal"
+                "PROJ_LIB=/share/proj"
+              ];
             User = "0";
           };
         };
