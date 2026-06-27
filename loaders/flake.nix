@@ -149,7 +149,16 @@
 
               mkdir -p "$out/bin"
               cp -L "${pkgs.busybox}/bin/busybox" "$out/bin/"
-              ln -sf busybox "$out/bin/vi"
+              for applet in \
+                vi ls cat cp mv rm mkdir rmdir touch ln chmod chown chgrp \
+                head tail more less grep wc sort cut tr uniq tee diff cmp strings fold expand fmt paste od hexdump \
+                find xargs pwd env which echo printf sleep true false seq yes test basename dirname readlink id \
+                ps kill pgrep pkill pidof df du date dmesg uname hostname \
+                md5sum sha1sum sha256sum crc32 \
+                wget ping ping6 nc nslookup tar gunzip zcat \
+                ; do
+                ln -sf busybox "$out/bin/$applet"
+              done
 
               rm -rf "$out/include"
               rm -rf "$out/nix"
@@ -284,8 +293,8 @@
           includeStorePaths = false;
 
           extraCommands = ''
-              cp -r --preserve=links --no-preserve=mode,ownership,timestamps ${runtime}/. ./
-              cp -r --preserve=links --no-preserve=mode,ownership,timestamps ${image-root}/. ./
+            cp -r --preserve=links --no-preserve=mode,ownership,timestamps ${runtime}/. ./
+            cp -r --preserve=links --no-preserve=mode,ownership,timestamps ${image-root}/. ./
           '';
 
           fakeRootCommands = ''
@@ -299,11 +308,11 @@
           config = {
             Entrypoint = [ "/entrypoint.sh" ];
             Cmd = [ "--help" ];
-              Env = [
-                "PAGER=less"
-                "GDAL_DATA=/share/gdal"
-                "PROJ_LIB=/share/proj"
-              ];
+            Env = [
+              "PAGER=less"
+              "GDAL_DATA=/share/gdal"
+              "PROJ_LIB=/share/proj"
+            ];
             User = "0";
           };
         };
