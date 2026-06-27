@@ -115,17 +115,8 @@
 
         allPkgs = with pkgs; [
           bash
-          coreutils
-          curl
           gdal
-          gnugrep
-          gnused
           proj
-          gzip
-          jq
-          less
-          xz.bin
-          zstd.bin
           dbcrossbar
           geocode-csv
           pgferry
