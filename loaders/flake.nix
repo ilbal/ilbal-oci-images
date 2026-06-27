@@ -144,7 +144,6 @@
               buildInputs = [
                 pkgs.patchelf
                 pkgs.binutils
-                pkgs.rdfind
               ];
             }
             ''
@@ -256,11 +255,23 @@
 
               find . -type f -exec file {} + | grep ELF | cut -d: -f1 | xargs -r strip --strip-unneeded 2>/dev/null || true
 
-              # Deduplicate identical shared libraries into hardlinks.
-              # The flatten step (cp -rL) and collect_libs both dereference
-              # symlinks, creating multiple copies of the same .so file.
-              # This saves 500MB+ in the final image.
-              rdfind -makehardlinks true lib/ 2>/dev/null || true
+              # Consolidate duplicate .so files into symlinks.
+              # For each family like libfoo.so, libfoo.so.1, libfoo.so.1.0.0,
+              # keep the most-versioned real file and symlink the rest.
+              find lib -maxdepth 1 -type f -name "*.so*" | while read -r f; do
+                base=$(basename "$f")
+                stem=''${base%%.so*}
+                # Find the most-versioned member of this family
+                latest=$(ls -1 lib/"$stem".so* 2>/dev/null | sort -t. -k3,3n -k4,4n -k5,5n | tail -1)
+                [ -z "$latest" ] && continue
+                # latest is already the real file, skip it
+                [ "$f" = "$latest" ] && continue
+                # If file is identical (by checksum), replace with symlink
+                if cmp -s "$f" "$latest"; then
+                  rm -f "$f"
+                  ln -sf "$(basename "$latest")" "$f"
+                fi
+              done
             '';
 
         image-root = pkgs.runCommand "image-root" { } ''
@@ -282,8 +293,8 @@
           includeStorePaths = false;
 
           extraCommands = ''
-            cp -rL --no-preserve=mode,ownership,timestamps ${runtime}/. ./
-            cp -rL --no-preserve=mode,ownership,timestamps ${image-root}/. ./
+              cp -r --preserve=links --no-preserve=mode,ownership,timestamps ${runtime}/. ./
+              cp -r --preserve=links --no-preserve=mode,ownership,timestamps ${image-root}/. ./
           '';
 
           fakeRootCommands = ''
