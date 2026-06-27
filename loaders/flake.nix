@@ -150,7 +150,7 @@
               mkdir -p "$out/bin"
               cp -L "${pkgs.busybox}/bin/busybox" "$out/bin/"
               for applet in \
-                vi ls cat cp mv rm mkdir rmdir touch ln chmod chown chgrp \
+                sh vi ls cat cp mv rm mkdir rmdir touch ln chmod chown chgrp \
                 head tail more less grep wc sort cut tr uniq tee diff cmp strings fold expand fmt paste od hexdump \
                 find xargs pwd env which echo printf sleep true false seq yes test basename dirname readlink id \
                 ps kill pgrep pkill pidof df du date dmesg uname hostname \
@@ -254,6 +254,19 @@
               done
 
               find . -type f -exec file {} + | grep ELF | cut -d: -f1 | xargs -r strip --strip-unneeded 2>/dev/null || true
+
+              # Remove broken Python wrapper scripts (no Python in image).
+              rm -f bin/*.py 2>/dev/null || true
+              for f in bin/*; do
+                [ -f "$f" ] || continue
+                read -r line < "$f" || true
+                case "$line" in */python*) rm -f "$f" ;; esac
+              done
+
+              # Fix gdal-config shebang to point to /bin/sh instead of nix store.
+              if [ -f bin/gdal-config ]; then
+                sed -i '1s|^#!.*|#!/bin/sh|' bin/gdal-config
+              fi
 
               # Consolidate duplicate .so files into symlinks.
               # For each family like libfoo.so, libfoo.so.1, libfoo.so.1.0.0,
