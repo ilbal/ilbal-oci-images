@@ -115,7 +115,6 @@
 
         allPkgs = with pkgs; [
           bash
-          busybox
           coreutils
           curl
           gdal
@@ -145,6 +144,7 @@
               buildInputs = [
                 pkgs.patchelf
                 pkgs.binutils
+                pkgs.rdfind
               ];
             }
             ''
@@ -167,6 +167,9 @@
               rm -rf "$out/share/man"
               rm -rf "$out/share/info"
               rm -rf "$out/man"
+              rm -rf "$out/lib/jni"
+              rm -rf "$out/lib/python3.13"
+              rm -rf "$out/lib/cmake"
               find "$out" -name "*.a" -delete
               find "$out" -name "*.la" -delete
               find "$out" -name "*.pc" -delete
@@ -252,6 +255,12 @@
               done
 
               find . -type f -exec file {} + | grep ELF | cut -d: -f1 | xargs -r strip --strip-unneeded 2>/dev/null || true
+
+              # Deduplicate identical shared libraries into hardlinks.
+              # The flatten step (cp -rL) and collect_libs both dereference
+              # symlinks, creating multiple copies of the same .so file.
+              # This saves 500MB+ in the final image.
+              rdfind -makehardlinks true lib/ 2>/dev/null || true
             '';
 
         image-root = pkgs.runCommand "image-root" { } ''
