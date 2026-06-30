@@ -2,8 +2,9 @@
   description = "Minimal PostgreSQL OCI image with PostGIS and pgRouting";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
+    base.url = "path:../base";
+    nixpkgs.follows = "base/nixpkgs";
+    flake-utils.follows = "base/flake-utils";
   };
 
   outputs =
@@ -11,6 +12,7 @@
       self,
       nixpkgs,
       flake-utils,
+      base,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -384,6 +386,8 @@
             tag = "latest";
             created = "now";
 
+            fromImage = base.packages.${system}.python-gdal-base;
+
             # Contents is empty — we copy real files via extraCommands below.
             # If we put store paths in `contents`, symlinkJoin creates symlinks
             # back to /nix/store, which would be broken when includeStorePaths=false.
@@ -418,6 +422,9 @@
                 "PAGER=pspg"
                 "PGDATA=/var/lib/postgresql/data"
                 "TERMINFO=/share/terminfo"
+                "PYTHONHOME=${pkgs.python3.withPackages (ps: [ ps.numpy ])}"
+                "GDAL_DATA=${pkgs.gdalMinimal}/share/gdal"
+                "PROJ_LIB=${pkgs.proj}/share/proj"
               ];
               User = "0";
               WorkingDir = "/var/lib/postgresql";

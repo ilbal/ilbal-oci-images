@@ -1,20 +1,5 @@
 {
   "nodes": {
-    "base": {
-      "inputs": {
-        "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
-      },
-      "locked": {
-        "path": "../base",
-        "type": "path"
-      },
-      "original": {
-        "path": "../base",
-        "type": "path"
-      },
-      "parent": []
-    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -50,15 +35,8 @@
     },
     "root": {
       "inputs": {
-        "base": "base",
-        "flake-utils": [
-          "base",
-          "flake-utils"
-        ],
-        "nixpkgs": [
-          "base",
-          "nixpkgs"
-        ]
+        "flake-utils": "flake-utils",
+        "nixpkgs": "nixpkgs"
       }
     },
     "systems": {

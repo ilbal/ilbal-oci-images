@@ -2,8 +2,9 @@
   description = "OCI image with data-loading tools for ilbal PostgreSQL images";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
+    base.url = "path:../base";
+    nixpkgs.follows = "base/nixpkgs";
+    flake-utils.follows = "base/flake-utils";
   };
 
   outputs =
@@ -11,6 +12,7 @@
       self,
       nixpkgs,
       flake-utils,
+      base,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -167,7 +169,6 @@
               rm -rf "$out/share/info"
               rm -rf "$out/man"
               rm -rf "$out/lib/jni"
-              rm -rf "$out/lib/python3.13"
               rm -rf "$out/lib/cmake"
               find "$out" -name "*.a" -delete
               find "$out" -name "*.la" -delete
@@ -255,14 +256,6 @@
 
               find . -type f -exec file {} + | grep ELF | cut -d: -f1 | xargs -r strip --strip-unneeded 2>/dev/null || true
 
-              # Remove broken Python wrapper scripts (no Python in image).
-              rm -f bin/*.py 2>/dev/null || true
-              for f in bin/*; do
-                [ -f "$f" ] || continue
-                read -r line < "$f" || true
-                case "$line" in */python*) rm -f "$f" ;; esac
-              done
-
               # Fix gdal-config shebang to point to /bin/sh instead of nix store.
               if [ -f bin/gdal-config ]; then
                 sed -i '1s|^#!.*|#!/bin/sh|' bin/gdal-config
@@ -301,6 +294,8 @@
           name = "ilbal-postgresql-loaders-${version}";
           tag = "latest";
           created = "now";
+
+          fromImage = base.packages.${system}.python-gdal-base;
 
           contents = [ ];
           includeStorePaths = false;

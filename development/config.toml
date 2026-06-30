@@ -32,6 +32,7 @@ nixpkgs = [
   "pg_net",
   "pgtap",
   "pg_safeupdate",
+  "plpython3",
   "tds_fdw",
   "h3-pg",  # Provides both h3 and h3_postgis extensions
   # To exclude a simple extension, comment out its line:
