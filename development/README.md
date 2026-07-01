@@ -1,12 +1,22 @@
-## Building with flake.nix
-1. `nix build .#` # for building the default package
-2. `nix build .#pg16` # for building a specific pg version package
-3. `./result | docker load`
+## Build
 
+```bash
+nix build          # default: PG 18
+nix build .#pg16   # PG 16
+nix build .#pg17   # PG 17
+nix build .#pg18   # PG 18
+./result | docker load
+```
 
+Produces `ilbal-postgresql:<major>` where `major` is the PostgreSQL major
+version (16, 17, or 18).
 
-## For building ilbal18-image.nix
-1. `nix build --file ilbal18-image.nix --show-trace`
-2. `nix build --file ilbal18-image.nix`
-3. `./result | docker load`
-4. `docker images`
+## Run
+
+```bash
+docker run --rm --name ilbaldb \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=password \
+  -p 5432:5432 \
+  ilbal-postgresql:18
+```

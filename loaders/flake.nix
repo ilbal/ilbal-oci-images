@@ -117,8 +117,6 @@
 
         allPkgs = with pkgs; [
           bash
-          gdal
-          proj
           dbcrossbar
           geocode-csv
           pgferry
@@ -137,7 +135,9 @@
               buildInputs = [
                 pkgs.patchelf
                 pkgs.binutils
+                pkgs.rdfind
               ];
+              baseRuntime = base.packages.${system}.base-runtime;
             }
             ''
               set -euo pipefail
@@ -278,6 +278,33 @@
                   ln -sf "$(basename "$latest")" "$f"
                 fi
               done
+
+              # Second pass: find any remaining duplicate .so files across
+              # different stem families and deduplicate with hard links.
+              ${pkgs.rdfind}/bin/rdfind -makehardlinks true lib/ 2>/dev/null || true
+
+              # Dedup summary.
+              echo "=== dedup summary ==="
+              total=$(find lib -name "*.so*" -type f | wc -l)
+              unique=$(find lib -name "*.so*" -type f -exec md5sum {} + | awk '{print $1}' | sort -u | wc -l)
+              echo "lib/*.so* files: $total total, $unique unique content"
+
+              # Remove files that duplicate the base layer.
+              echo "=== removing base duplicates from bin/ ==="
+              if [ -d "$baseRuntime/bin" ]; then
+                n=0
+                for f in "$out"/bin/*; do
+                  [ -f "$f" ] || continue
+                  name=$(basename "$f")
+                  [ -f "$baseRuntime/bin/$name" ] || continue
+                  echo "  removing (base duplicate): $name"
+                  rm -f "$f"
+                  n=$((n + 1))
+                done
+                echo "  removed $n files"
+              fi
+              rm -rf "$out/share/gdal" "$out/share/proj" "$out/share/locale"
+              rm -rf "$out/lib"/python3.*
             '';
 
         image-root = pkgs.runCommand "image-root" { } ''
@@ -291,8 +318,8 @@
         version = builtins.replaceStrings [ "\n" ] [ "" ] (builtins.readFile ./.version);
 
         image = pkgs.dockerTools.streamLayeredImage {
-          name = "ilbal-postgresql-loaders-${version}";
-          tag = "latest";
+          name = "ilbal-ingest";
+          tag = version;
           created = "now";
 
           fromImage = base.packages.${system}.python-gdal-base;

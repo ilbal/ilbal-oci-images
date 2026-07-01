@@ -1,4 +1,4 @@
-# ilbal-postgresql-loaders
+# ilbal-ingest
 
 OCI image with data-loading tools for PostgreSQL.
 
@@ -9,14 +9,23 @@ nix build
 ./result | docker load
 ```
 
-Produces `ilbal-postgresql-loaders-<version>:latest` where `version` is the content of `.version` (with trailing newline stripped). Increment `.version` and run `git add .version` before building to publish a new version.
+Produces `ilbal-ingest:<version>` where `version` is the content
+of `.version` (with trailing newline stripped). Tag a copy as `:latest` for
+convenience:
+
+```bash
+docker tag ilbal-ingest:<version> ilbal-ingest:latest
+```
+
+Increment `.version` and run `git add .version` before building to publish a
+new version.
 
 ## Usage
 
 Mount data and run any tool:
 
 ```bash
-docker run --rm -v /path/to/data:/data ilbal-postgresql-loaders:latest scrubcsv /data/input.csv
+docker run --rm -v /path/to/data:/data ilbal-ingest:latest scrubcsv /data/input.csv
 ```
 
 Default entrypoint shows available tools (dbcrossbar, ogr2ogr, pgferry, csv-tools, geocode-csv).

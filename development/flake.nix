@@ -112,16 +112,18 @@
               let
                 src = pkgs.fetchurl { inherit url hash; };
               in
-              pkgs.runCommand "${pname}-${version}" {
-                nativeBuildInputs = [ pkgs.gnutar ];
-              } ''
-                mkdir -p $out/lib $out/share/postgresql/extension
-                cd $(mktemp -d)
-                tar xzf ${src}
-                mv *.so    $out/lib/ || true
-                mv *.control $out/share/postgresql/extension/ 2>/dev/null || true
-                mv *.sql    $out/share/postgresql/extension/ 2>/dev/null || true
-              '';
+              pkgs.runCommand "${pname}-${version}"
+                {
+                  nativeBuildInputs = [ pkgs.gnutar ];
+                }
+                ''
+                  mkdir -p $out/lib $out/share/postgresql/extension
+                  cd $(mktemp -d)
+                  tar xzf ${src}
+                  mv *.so    $out/lib/ || true
+                  mv *.control $out/share/postgresql/extension/ 2>/dev/null || true
+                  mv *.sql    $out/share/postgresql/extension/ 2>/dev/null || true
+                '';
 
             # Build each custom extension against this specific PG version.
             customExtFiles = builtins.readDir ./extensions;
@@ -187,15 +189,6 @@
         # which is handled separately to avoid hard-link bloat).
         extraPkgNames = builtins.filter (n: n != "busybox") (allRuntimeDepNames ++ basePkgNames);
 
-        # Build the shell loop string for flattening all package trees.
-        mkFlattenLoop =
-          pg:
-          let
-            extraPkgs = map getPkg extraPkgNames;
-            allPkgs = [ pg ] ++ extraPkgs;
-          in
-          builtins.concatStringsSep " \\\n  " (map (p: "${p}") allPkgs);
-
         # -----------------------------------------------------------------
         #  Function: takes a postgresql-with-extensions package and
         #  produces a flattened, relocatable Docker/OCI image.
@@ -204,13 +197,25 @@
           pg:
 
           let
+            baseRuntime = base.packages.${system}.base-runtime;
+            extraPkgs = map getPkg extraPkgNames;
+
+            # Cache PG + extensions + runtime deps as a single store path
+            # so script-only tweaks to pg-runtime don't trigger rebuilds.
+            pg-inputs = pkgs.symlinkJoin {
+              name = "pg-inputs";
+              paths = [ pg ] ++ extraPkgs;
+            };
+
             pg-runtime =
               pkgs.runCommand "pg-runtime"
                 {
                   buildInputs = [
                     pkgs.patchelf
                     pkgs.binutils
+                    pkgs.rdfind
                   ];
+                  inherit baseRuntime;
                 }
                 ''
                   set -euo pipefail
@@ -218,12 +223,9 @@
                   mkdir -p "$out"
 
                   # Flatten PG + extensions + runtime deps into a single $out directory.
-                  # This avoids each Nix store path becoming a separate Docker layer,
-                  # reducing the final image's layer count and size.
-                  for pkg in \
-                    ${mkFlattenLoop pg}; do
-                    cp -rL --no-preserve=mode,ownership,timestamps "$pkg"/* "$out/"
-                  done
+                  # pg-inputs is a symlinkJoin of all packages; cp -rL follows the
+                  # symlinks and copies the actual files, avoiding store-path leakage.
+                  cp -rL --no-preserve=mode,ownership,timestamps ${pg-inputs}/* "$out/"
 
                   # Copy the busybox multi-call binary once (not the full package
                   # with ~400 hard-linked applets) and create a vi symlink.
@@ -366,6 +368,69 @@
                   # Strip debug symbols from all ELF binaries.
                   # The originals remain untouched in the Nix store for debugging.
                   find . -type f -exec file {} + | grep ELF | cut -d: -f1 | xargs -r strip --strip-unneeded 2>/dev/null || true
+
+                  # Consolidate duplicate .so files into symlinks.
+                  # For each family like libfoo.so, libfoo.so.1, libfoo.so.1.0.0,
+                  # keep the most-versioned real file and symlink the rest.
+                  find lib -maxdepth 1 -type f -name "*.so*" | while read -r f; do
+                    base=$(basename "$f")
+                    stem=''${base%%.so*}
+                    latest=$(ls -1 lib/"$stem".so* 2>/dev/null | sort -t. -k3,3n -k4,4n -k5,5n | tail -1)
+                    [ -z "$latest" ] && continue
+                    [ "$f" = "$latest" ] && continue
+                    if cmp -s "$f" "$latest"; then
+                      rm -f "$f"
+                      ln -sf "$(basename "$latest")" "$f"
+                    fi
+                  done
+
+                  # Second pass: find any remaining duplicate .so files across
+                  # different stem families and deduplicate with hard links.
+                  ${pkgs.rdfind}/bin/rdfind -makehardlinks true lib/ 2>/dev/null || true
+
+                  # Dedup summary.
+                  echo "=== dedup summary ==="
+                  total=$(find lib -name "*.so*" -type f | wc -l)
+                  unique=$(find lib -name "*.so*" -type f -exec md5sum {} + | awk '{print $1}' | sort -u | wc -l)
+                  echo "lib/*.so* files: $total total, $unique unique content"
+
+                  # Remove files that duplicate the base layer.
+                  echo "=== removing base duplicates from bin/ ==="
+                  echo "  baseRuntime = ${baseRuntime}"
+                  ls "${baseRuntime}/bin/" 2>/dev/null || echo "  (no bin/ in baseRuntime)"
+                  echo "  pg-runtime bin/ content:"
+                  ls "$out/bin/" 2>/dev/null || echo "  (no bin/ in pg-runtime)"
+                  if [ -d "${baseRuntime}/bin" ]; then
+                    n=0
+                    for f in "$out"/bin/*; do
+                      [ -f "$f" ] || continue
+                      name=$(basename "$f")
+                      [ -f "${baseRuntime}/bin/$name" ] || continue
+                      echo "  removing (base duplicate): $name"
+                      rm -f "$f"
+                      n=$((n + 1))
+                    done
+                    echo "  removed $n files"
+                  fi
+                  # lib/: delete any entry (file or symlink) whose name also
+                  # exists in baseRuntime/lib/ — it is provided by the base layer.
+                  echo "=== removing base duplicates from lib/ ==="
+                  if [ -d "${baseRuntime}/lib" ]; then
+                    n=0
+                    for f in "$out"/lib/*; do
+                      [ -f "$f" ] || [ -L "$f" ] || continue
+                      name=$(basename "$f")
+                      [ -e "${baseRuntime}/lib/$name" ] || [ -L "${baseRuntime}/lib/$name" ] || continue
+                      echo "  removing (base duplicate): $name"
+                      rm -f "$f"
+                      n=$((n + 1))
+                    done
+                    echo "  removed $n files"
+                  fi
+                  # share/gdal and share/proj are provided by base layer.
+                  rm -rf "$out/share/gdal" "$out/share/proj" "$out/share/locale"
+                  # lib/python3.* is provided by base layer.
+                  rm -rf "$out/lib"/python3.*
                 '';
 
             # Creates the filesystem skeleton for the Docker image:
@@ -382,8 +447,8 @@
 
           in
           pkgs.dockerTools.streamLayeredImage {
-            name = "ilbal-postgresql-${pg.version}";
-            tag = "latest";
+            name = "ilbal-postgresql";
+            tag = builtins.substring 0 2 pg.version;
             created = "now";
 
             fromImage = base.packages.${system}.python-gdal-base;
@@ -398,12 +463,16 @@
             # with relative RPATHs and a relocated interpreter — no Nix store required.
             includeStorePaths = false;
 
-            # Copy real files into the layer (not symlinks).
-            # pg-runtime and image-root outputs contain actual files because
-            # their derivations use cp -rL (dereference).
+            # Copy files into the layer using archive mode to preserve
+            # dedup symlinks and hard links from pg-runtime.
+            # fakeRootCommands below resets permissions explicitly.
             extraCommands = ''
-              cp -rL --no-preserve=mode,ownership,timestamps ${pg-runtime}/. ./
-              cp -rL --no-preserve=mode,ownership,timestamps ${image-root}/. ./
+              cp -ra ${pg-runtime}/. ./
+              # Ensure directories are writable before adding image-root files.
+              # cp -ra preserves the Nix store's read-only dir permissions (555),
+              # which would prevent a subsequent cp from writing to etc/ etc.
+              find . -type d -exec chmod 755 {} \;
+              cp -ra ${image-root}/. ./
             '';
 
             # Reset permissions (the -L above strips the originals).
@@ -422,9 +491,9 @@
                 "PAGER=pspg"
                 "PGDATA=/var/lib/postgresql/data"
                 "TERMINFO=/share/terminfo"
-                "PYTHONHOME=${pkgs.python3.withPackages (ps: [ ps.numpy ])}"
-                "GDAL_DATA=${pkgs.gdalMinimal}/share/gdal"
-                "PROJ_LIB=${pkgs.proj}/share/proj"
+                "PYTHONHOME=/"
+                "GDAL_DATA=/share/gdal"
+                "PROJ_LIB=/share/proj"
               ];
               User = "0";
               WorkingDir = "/var/lib/postgresql";

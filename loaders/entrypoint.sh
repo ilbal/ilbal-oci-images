@@ -13,7 +13,7 @@ if [ $# -eq 0 ] || [ "$1" = "--help" ]; then
   echo "  hashcsv      — Add a hash-based ID column to CSV rows"
   echo "  geocode-csv  — Geocode CSV files using Smarty API or libpostal"
   echo ""
-  echo "Usage: docker run --rm ilbal-postgresql-loaders <tool> [args...]"
+  echo "Usage: docker run --rm ilbal-ingest <tool> [args...]"
   exit 0
 fi
 
