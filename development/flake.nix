@@ -234,6 +234,8 @@
                   mkdir -p "$out/bin"
                   cp -L "${pkgs.busybox}/bin/busybox" "$out/bin/"
                   ln -sf busybox "$out/bin/vi"
+                  ln -sf busybox "$out/bin/awk"
+                  ln -sf busybox "$out/bin/mountpoint"
 
                   # Strip build-time artifacts before library discovery.
                   # These are pulled into the closure via postgresql-*-dev
@@ -436,7 +438,10 @@
             # Creates the filesystem skeleton for the Docker image:
             # user/group database, nsswitch, and the entrypoint script.
             image-root = pkgs.runCommand "image-root" { } ''
-              mkdir -p $out/etc $out/var/lib/postgresql
+              mkdir -p $out/etc $out/var/lib/postgresql $out/run/postgresql
+              # Standard Linux convention: /var/run -> ../run (Docker base images
+              # have this; our flat Nix image doesn't).
+              ln -sf ../run $out/var/run
               echo "root:x:0:0:root:/root:/bin/sh"     > $out/etc/passwd
               echo "postgres:x:999:999:postgres:/var/lib/postgresql:/bin/sh" >> $out/etc/passwd
               echo "root:x:0:"                          > $out/etc/group
@@ -472,6 +477,8 @@
               # cp -ra preserves the Nix store's read-only dir permissions (555),
               # which would prevent a subsequent cp from writing to etc/ etc.
               find . -type d -exec chmod 755 {} \;
+              # Official PostgreSQL entrypoint expects this directory to exist
+              mkdir -p docker-entrypoint-initdb.d
               cp -ra ${image-root}/. ./
             '';
 
