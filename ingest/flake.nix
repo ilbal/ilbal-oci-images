@@ -320,7 +320,7 @@
         image = pkgs.dockerTools.streamLayeredImage {
           name = "ilbal-ingest";
           tag = version;
-          created = "now";
+          created = "2026-08-14T21:14:10Z";
 
           fromImage = base.packages.${system}.python-gdal-base;
 

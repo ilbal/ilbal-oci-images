@@ -201,7 +201,7 @@
         image = pkgs.dockerTools.buildLayeredImage {
           name = "ilbal-base";
           tag = version;
-          created = "now";
+          created = "2026-08-14T21:04:48Z";
 
           # base-runtime is already flattened and relocatable — no Nix store
           # paths to include.  Prevent buildLayeredImage from pulling in the

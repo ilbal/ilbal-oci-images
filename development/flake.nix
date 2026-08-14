@@ -454,7 +454,7 @@
           pkgs.dockerTools.streamLayeredImage {
             name = "ilbal-postgresql";
             tag = builtins.substring 0 2 pg.version;
-            created = "now";
+            created = "2026-08-14T21:14:10Z";
 
             fromImage = base.packages.${system}.python-gdal-base;
 

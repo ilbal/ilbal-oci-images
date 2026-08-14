@@ -5,6 +5,7 @@ OCI image with data-loading tools for PostgreSQL.
 ## Build
 
 ```bash
+# Change `created` (on line 323) to current datetime (date now | date to-timezone Zulu | format date "%Y-%m-%dT%H:%M:%SZ")
 nix build
 ./result | docker load
 ```

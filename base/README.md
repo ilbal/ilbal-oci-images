@@ -9,6 +9,8 @@ them separately.
 ## Build
 
 ```bash
+# Change `created` (on line 294) to current datetime (date now | date to-timezone Zulu | format date "%Y-%m-%dT%H:%M:%SZ")
+# If desired, bump .version to e.g. 0.1.1
 nix build
 docker load -i result
 docker tag ilbal-base:<version> ilbal-base:latest
