@@ -21,7 +21,7 @@
         version = builtins.replaceStrings [ "\n" ] [ "" ] (builtins.readFile ./.version);
 
         python3 = pkgs.python3;
-        gdal = pkgs.gdalMinimal;
+        gdal = pkgs.gdal;
         proj = pkgs.proj;
         numpy = pkgs.python3Packages.numpy;
 

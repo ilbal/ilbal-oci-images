@@ -1,6 +1,10 @@
 ## Build
 
 ```bash
+nix flake update base # if ilbal-base has been altered prior to building this image
+```
+
+```bash
 # Change `created` (on line 457) to current datetime (date now | date to-timezone Zulu | format date "%Y-%m-%dT%H:%M:%SZ")
 nix build          # default: PG 18
 nix build .#pg16   # PG 16
