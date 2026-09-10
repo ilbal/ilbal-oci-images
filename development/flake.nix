@@ -497,6 +497,8 @@
               Env = [
                 "PAGER=pspg"
                 "PGDATA=/var/lib/postgresql/data"
+                "LANG=C.UTF8"
+                "LC_ALL=C.UTF8"
                 "TERMINFO=/share/terminfo"
                 "PYTHONHOME=/"
                 "GDAL_DATA=/share/gdal"
